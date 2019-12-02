@@ -85,7 +85,7 @@ def project_masks_on_boxes(segmentation_masks, proposals, discretization_size, m
     return torch.stack(masks, dim=0).to(device, dtype=torch.float32), mask_ratios
 
 class MaskRCNNLossComputation(object):
-    def __init__(self, proposal_matcher, discretization_size, maskiou_on):
+    def __init__(self, proposal_matcher, loss_weight, discretization_size, maskiou_on):
         """
         Arguments:
             proposal_matcher (Matcher)
@@ -94,6 +94,7 @@ class MaskRCNNLossComputation(object):
         self.proposal_matcher = proposal_matcher
         self.discretization_size = discretization_size
         self.maskiou_on = maskiou_on
+        self.loss_weight = loss_weight
 
     def match_targets_to_proposals(self, proposal, target):
         match_quality_matrix = boxlist_iou(target, proposal)
@@ -193,6 +194,7 @@ class MaskRCNNLossComputation(object):
         mask_loss = F.binary_cross_entropy_with_logits(
             mask_logits[positive_inds, labels_pos], mask_targets
         )
+        mask_loss = mask_loss*self.loss_weight
         if not self.maskiou_on:
             return mask_loss
         else:
@@ -210,9 +212,9 @@ def make_roi_mask_loss_evaluator(cfg):
         cfg.MODEL.ROI_HEADS.BG_IOU_THRESHOLD,
         allow_low_quality_matches=False,
     )
-
+    loss_weight = cfg.MODEL.MASK_LOSS_WEIGHT
     loss_evaluator = MaskRCNNLossComputation(
-        matcher, cfg.MODEL.ROI_MASK_HEAD.RESOLUTION, cfg.MODEL.MASKIOU_ON
+        matcher, loss_weight, cfg.MODEL.ROI_MASK_HEAD.RESOLUTION, cfg.MODEL.MASKIOU_ON
     )
 
     return loss_evaluator
