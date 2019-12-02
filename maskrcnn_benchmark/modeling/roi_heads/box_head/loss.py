@@ -18,7 +18,7 @@ class FastRCNNLossComputation(object):
     Also supports FPN
     """
 
-    def __init__(self, proposal_matcher, fg_bg_sampler, box_coder):
+    def __init__(self, proposal_matcher, fg_bg_sampler, box_coder, classification_loss_weight, box_loss_weight):
         """
         Arguments:
             proposal_matcher (Matcher)
@@ -28,6 +28,8 @@ class FastRCNNLossComputation(object):
         self.proposal_matcher = proposal_matcher
         self.fg_bg_sampler = fg_bg_sampler
         self.box_coder = box_coder
+        self.classification_loss_weight = classification_loss_weight
+        self.box_loss_weight = box_loss_weight
 
     def match_targets_to_proposals(self, proposal, target):
         match_quality_matrix = boxlist_iou(target, proposal)
@@ -137,6 +139,7 @@ class FastRCNNLossComputation(object):
         )
 
         classification_loss = F.cross_entropy(class_logits, labels)
+        classification_loss = classification_loss * self.classification_loss_weight
 
         # get indices that correspond to the regression targets for
         # the corresponding ground truth labels, to be used with
@@ -152,6 +155,7 @@ class FastRCNNLossComputation(object):
             beta=1,
         )
         box_loss = box_loss / labels.numel()
+        box_loss = box_loss * self.box_loss_weight
 
         return classification_loss, box_loss
 
@@ -170,6 +174,10 @@ def make_roi_box_loss_evaluator(cfg):
         cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE, cfg.MODEL.ROI_HEADS.POSITIVE_FRACTION
     )
 
-    loss_evaluator = FastRCNNLossComputation(matcher, fg_bg_sampler, box_coder)
+    classification_loss_weight = cfg.MODEL.CLASSIFICATION_LOSS_WEIGHT
+    box_loss_weight = cfg.MODEL.BOX_LOSS_WEIGHT
+
+    loss_evaluator = FastRCNNLossComputation(matcher, fg_bg_sampler, box_coder,
+                                             classification_loss_weight, box_loss_weight)
 
     return loss_evaluator
