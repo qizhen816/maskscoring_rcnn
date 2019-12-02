@@ -166,9 +166,12 @@ class BoxList(object):
         return bbox.convert(self.mode)
 
     def rotate(self, matrix):
-        # a = matrix[:, :2]  #a.shape(2,2)
-        # b = matrix[:, 2:]  #b.shape(2,1)
+        """
+        Returns a rotated copy of this bounding box
 
+        :param matrix: Rotation matrix caculated
+         according to certain degree by Opencv CV2::getRotationMatrix2D
+        """
         bbox = self.bbox.numpy()
         num_box = bbox.shape[0]
         newbox = np.zeros((num_box, 8))

@@ -83,7 +83,6 @@ class RandomVerticalFlip(object):
         if random.random() < self.prob:
             image = F.vflip(image)
             target = target.transpose(1)
-            # save(image, target)
         return image, target
 
 class HorizontalLinearLight(object):
@@ -124,7 +123,7 @@ class VerticalLinearLight(object):
         return image, target
 
 class SmallAngleRotate(object):
-    def __init__(self,angle=10):
+    def __init__(self, angle=10):
         self.angle = random.randint(-1*angle, angle)
 
     def __call__(self, image, target):
@@ -137,16 +136,6 @@ class SmallAngleRotate(object):
         target = target.rotate(M)
         image = Image.fromarray(image)
         return image, target
-
-def save(image, target):
-    image = np.asarray(image.copy())
-    box = target.bbox.numpy()
-    mask = []
-    mk = target.extra_fields['masks']
-    for pg in mk.polygons:
-        mask.append(pg.polygons[0].numpy())
-    mask = np.array(mask)
-    np.savez('array_save.npz', image, box, mask)
 
 class ColorJitter(object):
     def __init__(self,
@@ -184,3 +173,16 @@ class Normalize(object):
         if target is None:
             return image
         return image, target
+
+def save(image, target, fname = 'array_save.npz'):
+    # Used to test augmentation results
+    # ::params image: PIL image
+    # ::params target: BoxList label
+    image = np.asarray(image.copy())
+    box = target.bbox.numpy()
+    mask = []
+    mk = target.extra_fields['masks']
+    for pg in mk.polygons:
+        mask.append(pg.polygons[0].numpy())
+    mask = np.array(mask)
+    np.savez(fname, image, box, mask)
