@@ -1,6 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
-
 import pycocotools.mask as mask_utils
 
 # transpose
@@ -89,6 +88,21 @@ class Polygons(object):
 
         return Polygons(flipped_polygons, size=self.size, mode=self.mode)
 
+    def rotate(self, matrix):
+        a = torch.from_numpy(matrix[:, :2]).float()
+        b = torch.from_numpy(matrix[:, 2:]).float()
+        b = torch.reshape(b, shape=(2,))
+        a = a.transpose(1,0)
+        rotated_polygons = []
+        for poly in self.polygons:
+            p = poly.clone()
+            p = p.reshape([-1, 2])
+            p = torch.mm(p, a) + b
+            p = p.int().reshape([-1]).clone().float()
+            rotated_polygons.append(p)
+        return Polygons(rotated_polygons, size=self.size, mode=self.mode)
+
+
     def crop(self, box):
         w, h = box[2] - box[0], box[3] - box[1]
 
@@ -121,6 +135,7 @@ class Polygons(object):
             scaled_polygons.append(p)
 
         return Polygons(scaled_polygons, size=size, mode=self.mode)
+
 
     def convert(self, mode):
         width, height = self.size
@@ -173,6 +188,13 @@ class SegmentationMask(object):
             flipped.append(polygon.transpose(method))
         return SegmentationMask(flipped, size=self.size, mode=self.mode)
 
+    def rotate(self, matrix):
+        rotated = []
+        for polygon in self.polygons:
+            r = polygon.rotate(matrix)
+            rotated.append(r)
+        return SegmentationMask(rotated, size=self.size, mode=self.mode)
+
     def crop(self, box):
         w, h = box[2] - box[0], box[3] - box[1]
         cropped = []
@@ -195,7 +217,8 @@ class SegmentationMask(object):
         else:
             # advanced indexing on a single dimension
             selected_polygons = []
-            if isinstance(item, torch.Tensor) and item.dtype == torch.uint8:
+            if isinstance(item, torch.Tensor) and \
+                    (item.dtype == torch.uint8 or item.dtype == torch.bool):
                 item = item.nonzero()
                 item = item.squeeze(1) if item.numel() > 0 else item
                 item = item.tolist()
