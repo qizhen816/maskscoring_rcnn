@@ -70,6 +70,93 @@ class RandomHorizontalFlip(object):
         return image, target
 
 
+class RandomVerticalFlip(object):
+    def __init__(self, prob=0.5):
+        self.prob = prob
+
+    def __call__(self, image, target):
+        if random.random() < self.prob:
+            image = F.vflip(image)
+            target = target.transpose(1)
+            # save(image, target)
+        return image, target
+
+class RandomRotate180(object):
+    def __init__(self, prob=0.5):
+        self.prob = prob
+
+    def __call__(self, image, target):
+        if random.random() < self.prob:
+            image = F.hflip(image)
+            image = F.vflip(image)
+            target = target.transpose(0)
+            target = target.transpose(1)
+            # save(image, target)
+        return image, target
+
+class HorizontalLinearLight(object):
+    def __init__(self, prob=0.5, lightsacle=50):
+        self.prob = prob
+        self.lightsacle = lightsacle
+
+    def __call__(self, image, target):
+        if random.random() < self.prob:
+            image = np.asarray(image.copy())
+            h, w, c = image.shape
+            x = np.linspace(-1*self.lightsacle, self.lightsacle, w)
+            weight = np.expand_dims(x, axis=1)
+            weight = weight.repeat(c, axis=1)
+            image = image + weight
+            image[image < 0] = 0
+            image[image > 255] = 255
+            image = Image.fromarray(image.astype(np.uint8))
+        return image, target
+
+class VerticalLinearLight(object):
+    def __init__(self, prob=0.5, lightsacle=50):
+        self.prob = prob
+        self.lightsacle = lightsacle
+
+    def __call__(self, image, target):
+        if random.random() < self.prob:
+            image = np.asarray(image.copy())
+            h, w, c = image.shape
+            x = np.linspace(-1*self.lightsacle, self.lightsacle, h)
+            weight = np.expand_dims(x, axis=1)
+            weight = weight.repeat(c, axis=1)
+            weight = np.expand_dims(weight, axis=1)
+            image = image + weight
+            image[image < 0] = 0
+            image[image > 255] = 255
+            image = Image.fromarray(image.astype(np.uint8))
+        return image, target
+
+class SmallAngleRotate(object):
+    def __init__(self,angle=10):
+        self.angle = random.randint(-1*angle, angle)
+
+    def __call__(self, image, target):
+        image = np.asarray(image.copy())
+        h, w, _ = image.shape
+        cx = w / 2
+        cy = h / 2
+        M = cv2.getRotationMatrix2D((cx, cy), self.angle, 1.0)
+        image = cv2.warpAffine(image, M, (w, h))
+        target = target.rotate(M)
+        image = Image.fromarray(image)
+        # save(image, target)
+        return image, target
+
+def save(image, target):
+    image = np.asarray(image.copy())
+    box = target.bbox.numpy()
+    mask = []
+    mk = target.extra_fields['masks']
+    for pg in mk.polygons:
+        mask.append(pg.polygons[0].numpy())
+    mask = np.array(mask)
+    np.savez('array_save.npz', image, box, mask)
+
 class ToTensor(object):
     def __call__(self, image, target):
         return F.to_tensor(image), target

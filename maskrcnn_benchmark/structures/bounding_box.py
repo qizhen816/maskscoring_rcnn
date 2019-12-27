@@ -172,27 +172,18 @@ class BoxList(object):
         :param matrix: Rotation matrix caculated
          according to certain degree by Opencv CV2::getRotationMatrix2D
         """
-        bbox = self.bbox.numpy()
-        num_box = bbox.shape[0]
-        newbox = np.zeros((num_box, 8))
-        newbox[:, [0, 1, 2, 3, 4, 5, 6, 7]] = bbox[:, [0, 1,2, 1, 0, 3, 2, 3]]
-        a = matrix[:, :2]
-        b = matrix[:, 2:]
-        b = np.reshape(b, newshape=(1, 2))
-        a = np.transpose(a)
-        newbox = np.reshape(newbox, newshape=(num_box*4, 2))
-        newbox = np.dot(newbox, a) + b
-        newbox = np.reshape(newbox, newshape=(num_box, 8))
-        bbox = newbox.astype(int)
-        allx = bbox[:,[0, 2, 4, 6]]
-        ally = bbox[:,[1, 3, 5, 7]]
-        new_box = np.column_stack((allx.min(axis=1), ally.min(axis=1), allx.max(axis=1), ally.max(axis=1)))
-        new_box = torch.from_numpy(new_box)
-        bbox = BoxList(new_box, self.size, mode="xyxy")
+        bbox = BoxList(self.bbox, self.size, mode="xyxy")
         # bbox._copy_extra_fields(self)
         for k, v in self.extra_fields.items():
             if not isinstance(v, torch.Tensor):
                 v = v.rotate(matrix)
+                newbox = []
+                for polygon in v.polygons:
+                    coods = polygon.polygons[0].numpy()
+                    allx = coods[[0, 2, 4, 6]]
+                    ally = coods[[1, 3, 5, 7]]
+                    newbox.append([allx.min(), ally.min(), allx.max(), ally.max()])
+                bbox.bbox = torch.from_numpy(np.asarray(newbox))
             bbox.add_field(k, v)
         return bbox.convert(self.mode)
 

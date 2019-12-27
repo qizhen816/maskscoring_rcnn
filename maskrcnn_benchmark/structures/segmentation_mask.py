@@ -98,7 +98,9 @@ class Polygons(object):
             p = poly.clone()
             p = p.reshape([-1, 2])
             p = torch.mm(p, a) + b
-            p = p.int().reshape([-1]).clone().float()
+            p = p.reshape([-1]).clone().float()
+            p[0::2] = p[0::2].clamp(min=0, max=self.size[0]-1)
+            p[1::2] = p[1::2].clamp(min=0, max=self.size[1]-1)
             rotated_polygons.append(p)
         return Polygons(rotated_polygons, size=self.size, mode=self.mode)
 

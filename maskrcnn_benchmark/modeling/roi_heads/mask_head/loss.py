@@ -69,6 +69,10 @@ def project_masks_on_boxes(segmentation_masks, proposals, discretization_size, m
             mask_ratio = gt_box_mask_area / gt_img_mask_area
             '''
             #type 2
+            if x1 == x2:
+                x2 += 1
+            if y1 == y2:
+                y2 += 1
             rle_for_fullarea = mask_util.frPyObjects([p.numpy() for p in segmentation_mask_for_maskratio.polygons], y2-y1, x2-x1)
             full_area = torch.tensor(mask_util.area(rle_for_fullarea).sum().astype(float))
             rle_for_box_area = mask_util.frPyObjects([p.numpy() for p in cropped_mask.polygons], proposal[3]-proposal[1], proposal[2]-proposal[0])
